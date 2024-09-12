@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const types = @import("logger/types.zig");
-const writer = @import("logger/writer.zig");
+const types = @import("zigbeam/types.zig");
+const writer = @import("zigbeam/writer.zig");
 
 pub const LogLevel = types.LogLevel;
 pub const Logger = struct {

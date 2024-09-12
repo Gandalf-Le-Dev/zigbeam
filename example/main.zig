@@ -1,5 +1,5 @@
 const std = @import("std");
-const logger = @import("logger");
+const logger = @import("zigbeam");
 
 fn simulateUserLogin(log: *logger.Logger, username: []const u8) !void {
     var user_logger = try log.with("username", username);
