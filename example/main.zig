@@ -1,7 +1,7 @@
 const std = @import("std");
-const logger = @import("zigbeam");
+const zigbeam = @import("zigbeam");
 
-fn simulateUserLogin(log: *logger.Logger, username: []const u8) !void {
+fn simulateUserLogin(log: *zigbeam.Logger, username: []const u8) !void {
     var user_logger = try log.with("username", username);
     defer user_logger.deinit();
 
@@ -10,7 +10,7 @@ fn simulateUserLogin(log: *logger.Logger, username: []const u8) !void {
     try user_logger.log(.Warn, "this is a warn !");
 }
 
-fn processOrder(log: *logger.Logger, order_id: u32, total: f32) !void {
+fn processOrder(log: *zigbeam.Logger, order_id: u32, total: f32) !void {
     const order_id_str = try std.fmt.allocPrint(log.allocator, "{d}", .{order_id});
     defer log.allocator.free(order_id_str);
     const total_str = try std.fmt.allocPrint(log.allocator, "{d:.2}", .{total});
@@ -33,7 +33,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var log = try logger.Logger.init(allocator);
+    var log = try zigbeam.Logger.init(allocator);
     defer log.deinit();
 
     try log.info("Application started");
