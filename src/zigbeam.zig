@@ -6,14 +6,12 @@ const writer = @import("zigbeam/writer.zig");
 pub const LogLevel = types.LogLevel;
 pub const Logger = struct {
     allocator: Allocator,
-    fields: *std.StringHashMap([]const u8),
+    fields: std.StringHashMap([]const u8),
     
-    pub fn init(allocator: Allocator) !Logger {
-        const fields = try allocator.create(std.StringHashMap([]const u8));
-        fields.* = std.StringHashMap([]const u8).init(allocator);
+    pub fn init(allocator: Allocator) Logger {
         return Logger{
             .allocator = allocator,
-            .fields = fields,
+            .fields = std.StringHashMap([]const u8).init(allocator),
         };
     }
 
@@ -24,10 +22,9 @@ pub const Logger = struct {
             self.allocator.free(entry.value_ptr.*);
         }
         self.fields.deinit();
-        self.allocator.destroy(self.fields);
     }
 
-    pub fn log(self: *Logger, level: LogLevel, message: []const u8) !void {
+    pub fn log(self: *Logger, level: LogLevel, message: []const u8) void {
         var entry = types.LogEntry.init(self.allocator);
         defer entry.deinit();
 
@@ -36,59 +33,89 @@ pub const Logger = struct {
 
         var it = self.fields.iterator();
         while (it.next()) |kv| {
-            const key_dup = try self.allocator.dupe(u8, kv.key_ptr.*);
-            const value_dup = try self.allocator.dupe(u8, kv.value_ptr.*);
-            try entry.fields.put(key_dup, value_dup);
+            const key_dup = self.allocator.dupe(u8, kv.key_ptr.*) catch |e| {
+                std.log.err("Failed to duplicate key: {s}", .{@errorName(e)});
+                return;
+            };
+            const value_dup = self.allocator.dupe(u8, kv.value_ptr.*) catch |e| {
+                std.log.err("Failed to duplicate value: {s}", .{@errorName(e)});
+                self.allocator.free(key_dup);
+                return;
+            };
+            entry.fields.put(key_dup, value_dup) catch |e| {
+                std.log.err("Failed to put field: {s}", .{@errorName(e)});
+                self.allocator.free(key_dup);
+                self.allocator.free(value_dup);
+                return;
+            };
         }
 
-        try writer.writeEntry(&entry);
-    }
-
-    pub fn info(self: *Logger, message: []const u8) !void {
-        try self.log(.Info, message);
-    }
-
-    pub fn err(self: *Logger, message: []const u8) !void {
-        try self.log(.Error, message);
-    }
-
-    pub fn with(self: *Logger, key: []const u8, value: []const u8) !Logger {
-        var new_fields = try self.allocator.create(std.StringHashMap([]const u8));
-        new_fields.* = std.StringHashMap([]const u8).init(self.allocator);
-        
-        try copyFields(self.allocator, self.fields, new_fields);
-
-        const key_dup = try self.allocator.dupe(u8, key);
-        errdefer self.allocator.free(key_dup);
-        const value_dup = try self.allocator.dupe(u8, value);
-        errdefer self.allocator.free(value_dup);
-        try new_fields.put(key_dup, value_dup);
-
-        return Logger{
-            .allocator = self.allocator,
-            .fields = new_fields,
+        writer.writeEntry(&entry) catch |e| {
+            std.log.err("Failed to write entry: {s}", .{@errorName(e)});
         };
     }
 
-    pub fn withFields(self: *Logger, new_fields: std.StringHashMap([]const u8)) !Logger {
-        var combined_fields = try self.allocator.create(std.StringHashMap([]const u8));
-        combined_fields.* = std.StringHashMap([]const u8).init(self.allocator);
+    pub fn info(self: *Logger, message: []const u8) void {
+        self.log(.Info, message);
+    }
+
+    pub fn err(self: *Logger, message: []const u8) void {
+        self.log(.Error, message);
+    }
+
+    pub fn with(self: *Logger, key: []const u8, value: []const u8) Logger {
+        var new_logger = Logger.init(self.allocator);
         
-        try copyFields(self.allocator, self.fields, combined_fields);
+        copyFields(self.allocator, &self.fields, &new_logger.fields) catch |e| {
+            std.log.err("Failed to copy fields: {s}", .{@errorName(e)});
+            return new_logger;
+        };
+
+        const key_dup = self.allocator.dupe(u8, key) catch |e| {
+            std.log.err("Failed to duplicate key: {s}", .{@errorName(e)});
+            return new_logger;
+        };
+        const value_dup = self.allocator.dupe(u8, value) catch |e| {
+            std.log.err("Failed to duplicate value: {s}", .{@errorName(e)});
+            self.allocator.free(key_dup);
+            return new_logger;
+        };
+        new_logger.fields.put(key_dup, value_dup) catch |e| {
+            std.log.err("Failed to put new field: {s}", .{@errorName(e)});
+            self.allocator.free(key_dup);
+            self.allocator.free(value_dup);
+        };
+
+        return new_logger;
+    }
+
+    pub fn withFields(self: *Logger, new_fields: std.StringHashMap([]const u8)) Logger {
+        var new_logger = Logger.init(self.allocator);
+        
+        copyFields(self.allocator, &self.fields, &new_logger.fields) catch |e| {
+            std.log.err("Failed to copy fields: {s}", .{@errorName(e)});
+            return new_logger;
+        };
 
         var it = new_fields.iterator();
         while (it.next()) |kv| {
-            const key_dup = try self.allocator.dupe(u8, kv.key_ptr.*);
-            errdefer self.allocator.free(key_dup);
-            const value_dup = try self.allocator.dupe(u8, kv.value_ptr.*);
-            errdefer self.allocator.free(value_dup);
-            try combined_fields.put(key_dup, value_dup);
+            const key_dup = self.allocator.dupe(u8, kv.key_ptr.*) catch |e| {
+                std.log.err("Failed to duplicate key: {s}", .{@errorName(e)});
+                continue;
+            };
+            const value_dup = self.allocator.dupe(u8, kv.value_ptr.*) catch |e| {
+                std.log.err("Failed to duplicate value: {s}", .{@errorName(e)});
+                self.allocator.free(key_dup);
+                continue;
+            };
+            new_logger.fields.put(key_dup, value_dup) catch |e| {
+                std.log.err("Failed to put field: {s}", .{@errorName(e)});
+                self.allocator.free(key_dup);
+                self.allocator.free(value_dup);
+            };
         }
 
-        return Logger{
-            .allocator = self.allocator,
-            .fields = combined_fields,
-        };
+        return new_logger;
     }
 };
 

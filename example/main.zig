@@ -1,31 +1,44 @@
 const std = @import("std");
-const zigbeam = @import("zigbeam");
+const Logger = @import("zigbeam").Logger;
 
-fn simulateUserLogin(log: *zigbeam.Logger, username: []const u8) !void {
-    var user_logger = try log.with("username", username);
+fn simulateUserLogin(log: *Logger, username: []const u8) void {
+    var user_logger = log.with("username", username);
     defer user_logger.deinit();
 
-    try user_logger.info("User login attempt");
-    try user_logger.info("User logged in successfully");
-    try user_logger.log(.Warn, "this is a warn !");
+    user_logger.info("User login attempt");
+    user_logger.info("User logged in successfully");
+    user_logger.log(.Warn, "This is a warning!");
 }
 
-fn processOrder(log: *zigbeam.Logger, order_id: u32, total: f32) !void {
-    const order_id_str = try std.fmt.allocPrint(log.allocator, "{d}", .{order_id});
+fn processOrder(log: *Logger, order_id: u32, total: f32) void {
+    const order_id_str = std.fmt.allocPrint(log.allocator, "{d}", .{order_id}) catch {
+        log.err("Failed to allocate order_id string");
+        return;
+    };
     defer log.allocator.free(order_id_str);
-    const total_str = try std.fmt.allocPrint(log.allocator, "{d:.2}", .{total});
+    
+    const total_str = std.fmt.allocPrint(log.allocator, "{d:.2}", .{total}) catch {
+        log.err("Failed to allocate total string");
+        return;
+    };
     defer log.allocator.free(total_str);
 
     var new_fields = std.StringHashMap([]const u8).init(log.allocator);
     defer new_fields.deinit();
-    try new_fields.put("order_id", order_id_str);
-    try new_fields.put("total", total_str);
+    new_fields.put("order_id", order_id_str) catch {
+        log.err("Failed to put order_id field");
+        return;
+    };
+    new_fields.put("total", total_str) catch {
+        log.err("Failed to put total field");
+        return;
+    };
 
-    var order_logger = try log.withFields(new_fields);
+    var order_logger = log.withFields(new_fields);
     defer order_logger.deinit();
 
-    try order_logger.info("Processing new order");
-    try order_logger.info("Order processed successfully");
+    order_logger.info("Processing new order");
+    order_logger.info("Order processed successfully");
 }
 
 pub fn main() !void {
@@ -33,13 +46,13 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var log = try zigbeam.Logger.init(allocator);
+    var log = Logger.init(allocator);
     defer log.deinit();
 
-    try log.info("Application started");
+    log.info("Application started");
 
-    try simulateUserLogin(&log, "john_doe");
-    try processOrder(&log, 12345, 99.99);
+    simulateUserLogin(&log, "john_doe");
+    processOrder(&log, 12345, 99.99);
 
-    try log.info("Application finished");
+    log.info("Application finished");
 }
