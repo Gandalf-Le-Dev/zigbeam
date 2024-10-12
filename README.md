@@ -14,26 +14,26 @@ Structured Logging library for the Zig language
 
 2. Then in your build.zig you must add:
 
-```zig
-const zigbeam_dep = b.dependency("zigbeam", .{});
-const zigbeam_mod = zigbeam_dep.module("zigbeam");
-exe.root_module.addImport("zigbeam", zigbeam_mod);
-```
+    ```zig
+    const zigbeam_dep = b.dependency("zigbeam", .{});
+    const zigbeam_mod = zigbeam_dep.module("zigbeam");
+    exe.root_module.addImport("zigbeam", zigbeam_mod);
+    ```
 
 3. You can now use Zigbeam in your project. Here is an example:
 
-```zig
-const std = @import("std");
-const zigbeam = @import("zigbeam");
+    ```zig
+    const std = @import("std");
+    const zigbeam = @import("zigbeam");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    pub fn main() !void {
+        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+        defer _ = gpa.deinit();
+        const allocator = gpa.allocator();
 
-    var log = try zigbeam.Logger.init(allocator);
-    defer log.deinit();
+        var log = try zigbeam.Logger.init(allocator);
+        defer log.deinit();
 
-    try log.info("Zigbeam is working!");
-}
-```
+        try log.info("Zigbeam is working!");
+    }
+    ```
