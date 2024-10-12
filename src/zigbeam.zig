@@ -31,24 +31,24 @@ fn levelColor(level: std.log.Level) Color {
 // Compile-time function to generate colored level text
 fn coloredLevel(comptime level: std.log.Level) []const u8 {
     const color = comptime levelColor(level).asAnsi();
-    return color ++ level.asText() ++ "\x1b[0m";
+    return color ++ @tagName(level) ++ "\x1b[0m";
 }
 
 pub fn log(
-    comptime level: std.log.Level,
+    comptime message_level: std.log.Level,
     comptime scope: @Type(.EnumLiteral),
     comptime format: []const u8,
     args: anytype,
 ) void {
-    if (builtin.os.tag == .freestanding) {
-        @compileError("freestanding targets do not have I/O configured; please provide at least an empty `log` function declaration");
-    }
-
+    const level = std.options.log_level;
     const prefix = if (scope == .default) ": " else "(" ++ @tagName(scope) ++ "): ";
+
+    if (@intFromEnum(message_level) <= @intFromEnum(level)) {
     const stderr = std.io.getStdErr().writer();
     
     std.debug.lockStdErr();
     defer std.debug.unlockStdErr();
     
-    nosuspend stderr.print("[" ++ coloredLevel(level) ++ "]" ++ prefix ++ format ++ "\n", args) catch return;
+        nosuspend stderr.print("[" ++ coloredLevel(message_level) ++ "]" ++ prefix ++ format ++ "\n", args) catch return;
+    }
 }
