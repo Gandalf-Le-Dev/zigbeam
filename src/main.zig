@@ -1,10 +1,8 @@
 const std = @import("std");
 const Logger = @import("zigbeam").Logger;
 
-// Example usage
 pub fn main() void {
-    // Create a logger with default config
-    var log = Logger.init(.{
+    const log = Logger.init(.{
         .allocator = std.heap.page_allocator,
         .detect_no_color = false,
         .include_source_location = true,
@@ -18,9 +16,8 @@ pub fn main() void {
     log.info("Info message with value: {d}", .{42}, @src());
     log.warn("Warning message", .{}, @src());
     log.err("Error occurred: {s}", .{"something went wrong"}, @src());
-}
 
-pub const std_options = .{
-    // Set the log level to info
-    .log_level = .debug,
-};
+    // Changed from var to const
+    const scoped = log.scoped("custom_scope");
+    scoped.info("Scoped message: {s}", .{"hello"}, @src());
+}

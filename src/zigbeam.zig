@@ -44,11 +44,11 @@ pub const Logger = struct {
         };
     }
 
-    pub fn deinit(self: *Logger) void {
+    pub fn deinit(self: *const Logger) void {
         self.aurora.deinit();
     }
 
-    fn formatTimestamp(self: *Logger) []const u8 {
+    fn formatTimestamp(self: *const Logger) []const u8 {
         const now = std.time.timestamp();
         const ts = std.time.epoch.EpochSeconds{ .secs = @as(u64, @intCast(now)) };
         const dt = ts.getEpochDay();
@@ -96,10 +96,7 @@ pub const Logger = struct {
         };
     }
 
-    fn formatPrefix(
-        self: *Logger,
-        comptime level: std.log.Level,
-    ) []const u8 {
+    fn formatPrefix(self: *const Logger, comptime level: std.log.Level) []const u8 {
         var result: []const u8 = "";
 
         result = switch (level) {
@@ -112,16 +109,25 @@ pub const Logger = struct {
         return result;
     }
 
-    fn formatLocation(
-        self: *Logger,
-        file: []const u8,
-        line: usize,
-    ) []const u8 {
+    fn formatScope(self: *const Logger, comptime scope: []const u8) []const u8 {
+        var result: []const u8 = "";
+
+        if (scope.len == 0 or std.mem.eql(u8, scope, "default")) {
+            return result;
+        } else {
+            result = self.aurora.gray().fmt("[{s}] ", .{scope});
+        }
+
+        return result;
+    }
+
+    fn formatLocation(self: *const Logger, file: []const u8, line: usize) []const u8 {
         return self.aurora.gray().fmt(" ({s}:{d})", .{ file, line });
     }
 
-    pub fn log(
-        self: *Logger,
+    fn formatLog(
+        self: *const Logger,
+        comptime scope: []const u8,
         comptime level: std.log.Level,
         comptime format: []const u8,
         args: anytype,
@@ -137,6 +143,9 @@ pub const Logger = struct {
         // Get the prefix
         const prefix = self.formatPrefix(level);
 
+        // Get the scope
+        const scope_str = self.formatScope(scope);
+
         // Write timestamp if configured
         if (self.show_timestamp) {
             const ts_str = self.formatTimestamp();
@@ -145,6 +154,9 @@ pub const Logger = struct {
 
         // Write the level prefix
         writer.writeAll(prefix) catch unreachable;
+
+        // Write the scope
+        writer.writeAll(scope_str) catch unreachable;
 
         // Write the formatted message
         writer.print(format, args) catch unreachable;
@@ -158,39 +170,72 @@ pub const Logger = struct {
         writer.writeByte('\n') catch unreachable;
     }
 
+    pub const ScopedLogger = struct {
+        logger: *const Logger,
+        scope: []const u8,
+
+        pub fn log(self: *const ScopedLogger, comptime format: []const u8, args: anytype, source_location: std.builtin.SourceLocation) void {
+            self.logger.formatLog(self.scope, .debug, format, args, source_location);
+        }
+
+        pub fn debug(self: *const ScopedLogger, comptime format: []const u8, args: anytype, source_location: std.builtin.SourceLocation) void {
+            self.logger.formatLog(self.scope, .debug, format, args, source_location);
+        }
+
+        pub fn info(self: *const ScopedLogger, comptime format: []const u8, args: anytype, source_location: std.builtin.SourceLocation) void {
+            self.logger.formatLog(self.scope, .info, format, args, source_location);
+        }
+
+        pub fn warn(self: *const ScopedLogger, comptime format: []const u8, args: anytype, source_location: std.builtin.SourceLocation) void {
+            self.logger.formatLog(self.scope, .warn, format, args, source_location);
+        }
+
+        pub fn err(self: *const ScopedLogger, comptime format: []const u8, args: anytype, source_location: std.builtin.SourceLocation) void {
+            self.logger.formatLog(self.scope, .err, format, args, source_location);
+        }
+    };
+
+    pub fn scoped(self: *const Logger, comptime scope: []const u8) ScopedLogger {
+        return .{ .logger = self, .scope = scope };
+    }
+
+    pub fn log(self: *const Logger, comptime format: []const u8, args: anytype, source_location: std.builtin.SourceLocation) void {
+        self.formatLog("default", .debug, format, args, source_location);
+    }
+
     pub fn debug(
-        self: *Logger,
+        self: *const Logger,
         comptime format: []const u8,
         args: anytype,
         source_location: std.builtin.SourceLocation,
     ) void {
-        self.log(.debug, format, args, source_location);
+        self.formatLog("default", .debug, format, args, source_location);
     }
 
     pub fn info(
-        self: *Logger,
+        self: *const Logger,
         comptime format: []const u8,
         args: anytype,
         source_location: std.builtin.SourceLocation,
     ) void {
-        self.log(.info, format, args, source_location);
+        self.formatLog("default", .info, format, args, source_location);
     }
 
     pub fn warn(
-        self: *Logger,
+        self: *const Logger,
         comptime format: []const u8,
         args: anytype,
         source_location: std.builtin.SourceLocation,
     ) void {
-        self.log(.warn, format, args, source_location);
+        self.formatLog("default", .warn, format, args, source_location);
     }
 
     pub fn err(
-        self: *Logger,
+        self: *const Logger,
         comptime format: []const u8,
         args: anytype,
         source_location: std.builtin.SourceLocation,
     ) void {
-        self.log(.err, format, args, source_location);
+        self.formatLog("default", .err, format, args, source_location);
     }
 };

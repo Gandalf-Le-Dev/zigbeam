@@ -1,68 +1,23 @@
-# Zigbeam
-
-Structured Logging library for the Zig language
-
-## How to use
-
-1. You can fetch Zigbeam with this command
-
-   ```cmd
-   zig fetch --save=zigbeam git+https://github.com/Gandalf-Le-Dev/zigbeam/#HEAD
-   ```
-
-   It will fetch the master version. If you wish to fetch a specific version, replace `#HEAD` with the commit hash.
-
-2. Then in your build.zig you must add:
+# Error I am getting
 
     ```zig
-    const zigbeam_dep = b.dependency("zigbeam", .{});
-    const zigbeam_mod = zigbeam_dep.module("zigbeam");
-    exe_or_lib.root_module.addImport("zigbeam", zigbeam_mod);
+    run
+    └─ run zigbeam
+    └─ zig build-exe zigbeam Debug native 1 errors
+    src/zigbeam.zig:186:39: error: unable to evaluate comptime expression
+                self.logger.formatLog(self.scope, .info, format, args, source_location);
+                                    ~~~~^~~~~~
+    referenced by:
+        main: src/main.zig:22:16
+        callMain: /Users/gandalfledev/Library/Application Support/Code/User/globalStorage/ziglang.vscode-zig/zig_install/lib/std/start.zig:514:17
+        remaining reference traces hidden; use '-freference-trace' to see all reference traces
+    error: the following command failed with 1 compilation errors:
+    /Users/gandalfledev/Library/Application Support/Code/User/globalStorage/ziglang.vscode-zig/zig_install/zig build-exe -ODebug --dep aurora --dep zigbeam -Mroot=/Users/gandalfledev/Developer/zigbeam/src/main.zig -Maurora=/Users/gandalfledev/Developer/aurora/src/aurora.zig --dep aurora -Mzigbeam=/Users/gandalfledev/Developer/zigbeam/src/zigbeam.zig --cache-dir /Users/gandalfledev/Developer/zigbeam/.zig-cache --global-cache-dir /Users/gandalfledev/.cache/zig --name zigbeam --listen=- 
+    Build Summary: 0/3 steps succeeded; 1 failed (disable with --summary none)
+    run transitive failure
+    └─ run zigbeam transitive failure
+    └─ zig build-exe zigbeam Debug native 1 errors
+    error: the following build command failed with exit code 1:
+    /Users/gandalfledev/Developer/zigbeam/.zig-cache/o/3663f7e64f130b6c0025d2f923d9d94e/build /Users/gandalfledev/Library/Application Support/Code/User/globalStorage/ziglang.vscode-zig/zig_install/zig /Users/gandalfledev/Developer/zigbeam /Users/gandalfledev/Developer/zigbeam/.zig-cache /Users/gandalfledev/.cache/zig --seed 0xa83eff5f -Z0765ad75bdf6a3b4 run
     ```
-
-3. You can now use Zigbeam in your project. Here is an [example](/src/main.zig):
-
-    ```zig
-    const std = @import("std");
-    const Logger = @import("zigbeam").Logger;
-
-    // Example usage
-    pub fn main() void {
-        // Create a logger with default config
-        var log = Logger.init(.{
-            .allocator = std.heap.page_allocator,
-            .detect_no_color = false,
-            .include_source_location = true,
-            .show_timestamp = true,
-            .timestamp_format = .standard,
-        }) catch unreachable;
-        defer log.deinit();
-
-        // Use the logger
-        log.debug("Debug message: {s}", .{"test"}, @src());
-        log.info("Info message with value: {d}", .{42}, @src());
-        log.warn("Warning message", .{}, @src());
-        log.err("Error occurred: {s}", .{"something went wrong"}, @src());
-    }
-
-    pub const std_options = .{
-        // Set the log level to info
-        .log_level = .debug,
-    };
-    ```
-
-    The available timestamp formats are:
-
-    - `standard`: DD-MM-YYYY HH:MM:SS
-    - `iso8601`: YYYY-MM-DD HH:MM:SS
-    - `unix`: Unix timestamp
-    - `rfc3339`: YYYY-MM-DDThh:mm:ssZ
-    - `compact`: HH:MM:SS.mmm
-
-## Dependencies
-
-- [Aurora](https://github.com/Gandalf-Le-Dev/aurora)
-
-## Screenshots
-
-![Zigbeam](/img/SCR-20241026-urdd.png)
+    
