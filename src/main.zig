@@ -1,26 +1,23 @@
 const std = @import("std");
-const Logger = @import("zigbeam").Logger;
+const Logger = @import("zigbeam");
 
 // Example usage
-pub fn main() void {
-    // Create a logger with default config
-    var log = Logger.init(.{
-        .allocator = std.heap.page_allocator,
-        .detect_no_color = false,
-        .include_source_location = true,
-        .show_timestamp = true,
-        .timestamp_format = .default,
-    }) catch unreachable;
-    defer log.deinit();
+pub fn main() !void {
+    std.log.debug("Debug message: {s}", .{"test"});
+    std.log.info("Info message: {s}", .{"test"});
+    std.log.warn("Warning message: {s}", .{"test"});
+    std.log.err("Error message: {s}", .{"test"});
 
-    // Use the logger
-    log.debug("Debug message: {s}", .{"test"}, @src());
-    log.info("Info message with value: {d}", .{42}, @src());
-    log.warn("Warning message", .{}, @src());
-    log.err("Error occurred: {s}", .{"something went wrong"}, @src());
+    // You can also use the scoped logger
+    const log = std.log.scoped(.my_project);
+    log.debug("Debug message: {s}", .{"test"});
+    log.info("Info message: {s}", .{"test"});
+    log.warn("Warning message: {s}", .{"test"});
+    log.err("Error message: {s}", .{"test"});
 }
 
-pub const std_options = .{
+pub const std_options = std.Options{
     // Set the log level to info
     .log_level = .debug,
+    .logFn = Logger.defaultLog,
 };
