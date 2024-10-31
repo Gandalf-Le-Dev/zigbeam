@@ -15,41 +15,29 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    // Create the library
-    const zigbeam_lib = b.addStaticLibrary(.{
-        .name = "zigbeam",
-        .root_source_file = b.path("src/zigbeam.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    zigbeam_lib.root_module.addImport("aurora", aurora_mod);
-    b.installArtifact(zigbeam_lib);
-
-    // Create executable
+    // Create executable for integration tests
     const exe = b.addExecutable(.{
-        .name = "zigbeam",
+        .name = "zigbeam-test",  // Changed name to clarify it's for testing
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("aurora", aurora_mod);
     exe.root_module.addImport("zigbeam", zigbeam_mod);
-    b.installArtifact(exe);
-
-    // Add run step
+    
+    // Add run step for integration tests
     const run = b.addRunArtifact(exe);
-    const run_step = b.step("run", "Run library");
+    const run_step = b.step("run", "Run integration tests");  // Updated description
     run_step.dependOn(&run.step);
 
-    // Add test step
-    const main_tests = b.addTest(.{
+    // Unit tests
+    const unit_tests = b.addTest(.{
         .root_source_file = b.path("src/zigbeam.zig"),
         .target = target,
         .optimize = optimize,
     });
-    main_tests.root_module.addImport("aurora", aurora_mod);
+    unit_tests.root_module.addImport("aurora", aurora_mod);
 
-    const run_main_tests = b.addRunArtifact(main_tests);
-    const test_step = b.step("test", "Run library tests");
-    test_step.dependOn(&run_main_tests.step);
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_unit_tests.step);
 }
